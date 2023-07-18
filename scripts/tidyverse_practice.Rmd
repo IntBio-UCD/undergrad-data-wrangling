@@ -1,0 +1,53 @@
+---
+title: "tidyverse_practice"
+author: "Julin Maloof"
+date: "2023-07-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+```{r}
+data <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected.csv")
+```
+```{r}
+data <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
+
+```
+
+```{r}
+summary(data)
+```
+
+```{r}
+data <- data %>% filter(`germinated?` == 1)
+summary(data)
+```
+```{r}
+data %>% 
+  group_by(parent.pop) %>%
+  summarize(Height=mean(`Height (cm)`, na.rm=TRUE), Longest_leaf=mean(`Longest leaf (cm)`, na.rm = TRUE)) %>%
+  arrange(Height)
+```
+
+```{r}
+sem <- function(x, na.rm=FALSE) {
+  sd(x, na.rm = na.rm) / sqrt(length(na.omit(x)))
+}
+```
+
+```{r}
+data %>% 
+  group_by(parent.pop) %>%
+  summarize(Height=mean(`Height (cm)`, na.rm=TRUE), 
+            sd_height=sem(`Height (cm)`, na.rm=TRUE),
+            Longest_leaf=mean(`Longest leaf (cm)`, na.rm = TRUE),
+            sem_leaf=sem(`Longest leaf (cm)`, na.rm = TRUE)) %>%
+  arrange(Height)
+```
+
