@@ -12,29 +12,107 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 ```
-```{r}
-data <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected.csv")
-```
-```{r}
-data <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
-
-```
+## Load and filter the dat
 
 ```{r}
-summary(data)
+dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected.csv")
+```
+```{r}
+dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
 ```
 
 ```{r}
-data <- data %>% filter(`germinated?` == 1)
-summary(data)
+summary(dat)
 ```
+
 ```{r}
-data %>% 
+dat <- dat %>% filter(`germinated?` == 1)
+summary(dat)
+```
+## Summaries
+
+By pop:
+
+```{r}
+dat %>% 
   group_by(parent.pop) %>%
   summarize(Height=mean(`Height (cm)`, na.rm=TRUE), Longest_leaf=mean(`Longest leaf (cm)`, na.rm = TRUE)) %>%
   arrange(Height)
 ```
 
+By pop and mf:
+```{r}
+dat %>% 
+  group_by(parent.pop, mf) %>%
+  summarize(Height=mean(`Height (cm)`, na.rm=TRUE), Longest_leaf=mean(`Longest leaf (cm)`, na.rm = TRUE)) %>%
+  arrange(Height)
+```
+
+## Plotting
+
+First let's rename the columns
+
+```{r}
+dat <- dat %>%
+  rename(height_cm=`Height (cm)`, longest_leaf_cm=`Longest leaf (cm)`)
+```
+
+histogram
+```{r}
+dat %>%
+  ggplot(aes(x=longest_leaf_cm)) +
+  geom_histogram(fill="skyblue")
+```
+
+```{r}
+dat %>%
+  ggplot(aes(x=height_cm)) +
+  geom_histogram(fill="red") 
+```
+
+```{r}
+dat %>%
+  ggplot(aes(x=height_cm)) +
+  geom_histogram(fill="red") +
+  scale_x_sqrt()
+```
+
+Relationship between length and height:
+
+```{r}
+dat %>%
+  ggplot(aes(x=longest_leaf_cm, y= height_cm)) +
+  geom_point()
+```
+
+```{r, fig.asp=1.5}
+dat %>%
+  ggplot(aes(x=longest_leaf_cm, y= height_cm)) +
+  geom_point() +
+  facet_wrap(~ parent.pop)
+```
+
+plot per pop:
+
+```{r}
+dat %>%
+  mutate(parent.pop = fct_reorder(parent.pop, longest_leaf_cm)) %>%
+  ggplot(aes(x=parent.pop, y=longest_leaf_cm)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, vjust=.5))
+```
+
+```{r}
+dat %>%
+  mutate(parent.pop = fct_reorder(parent.pop, height_cm)) %>%
+  ggplot(aes(x=parent.pop, y=height_cm)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, vjust=.5))
+```
+
+Traditional bar plot
+
+First create a new function for sem
 ```{r}
 sem <- function(x, na.rm=FALSE) {
   sd(x, na.rm = na.rm) / sqrt(length(na.omit(x)))
@@ -42,12 +120,55 @@ sem <- function(x, na.rm=FALSE) {
 ```
 
 ```{r}
-data %>% 
+dat.summary <- dat %>% 
   group_by(parent.pop) %>%
-  summarize(Height=mean(`Height (cm)`, na.rm=TRUE), 
-            sd_height=sem(`Height (cm)`, na.rm=TRUE),
-            Longest_leaf=mean(`Longest leaf (cm)`, na.rm = TRUE),
-            sem_leaf=sem(`Longest leaf (cm)`, na.rm = TRUE)) %>%
+  summarize(Height=mean(height_cm, na.rm=TRUE), 
+            sem_height=sem(height_cm, na.rm=TRUE),
+            Longest_leaf=mean(longest_leaf_cm, na.rm = TRUE),
+            sem_leaf=sem(longest_leaf_cm, na.rm = TRUE)) %>%
   arrange(Height)
+
+dat.summary
 ```
+
+```{r}
+dat.summary %>%
+  mutate(parent.pop=fct_reorder(parent.pop, Longest_leaf)) %>%
+  ggplot(aes(x=parent.pop, y=Longest_leaf, ymin=Longest_leaf - sem_leaf, ymax= Longest_leaf + sem_leaf)) +
+  geom_col(fill="skyblue") +
+  geom_errorbar(width=.5)
+```
+
+```{r}
+dat.summary %>%
+  mutate(parent.pop=fct_reorder(parent.pop, Height)) %>%
+  ggplot(aes(x=parent.pop, y=Height, ymin=Height-sem_height, ymax=Height+sem_height)) +
+  geom_col(fill="red") +
+  geom_errorbar(width=.5)
+```
+
+## simple anova
+
+one-way
+```{r}
+aov1 <- aov(longest_leaf_cm ~ parent.pop, data = dat)
+summary(aov1)
+```
+nested
+```{r}
+aov2 <- aov(longest_leaf_cm ~ parent.pop/mf, data = dat)
+summary(aov2)
+```
+
+```{r}
+library(lmerTest)
+lmer1 <- lmer(longest_leaf_cm ~ (1|parent.pop/mf), data=dat)
+ranova(lmer1)
+```
+
+
+```{r}
+VarCorr(lmer1) %>% print(comp="Variance")
+ ```
+
 
