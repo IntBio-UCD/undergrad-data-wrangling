@@ -1,0 +1,43 @@
+## Notes for July 25
+
+* Creating a project
+  - Demo the project idea by switching out projects
+  - Organization of project: input, output, scripts
+  - Any questions about this?
+  - Any problems?
+  
+* Paths
+  - Explain paths and tab completion
+  
+* Go over the assignment (mean per pop and mf)
+  - First ask for status / questions
+  - Then go over my script
+  
+* GGplot tutorial
+  - Any questions / problems?
+  
+* In class plotting:
+  - Make a histogram of each of the two traits
+    - Are the traits ~ normally distributed? 
+    - Tranformation?
+  - Make a plot that shows the relationship of the two traits to each other
+    - modify this to have a separate panel for each parent.pop
+  - Make a plot that summarizes the data for each pop
+  - Demo: Data labels
+  - Demo: order x-axis
+  - Demo: bar plot of mean with SEM
+  - Discussion: bar plot vs box plot
+  
+* Discussion: ANOVA concepts
+  - Basic idea of variance within and between groups
+  - Quantifying variance: distance from the mean
+  
+$$
+\sum_{_i=1}^{n} {\frac{(y_i - \bar{y})^2}{n-1}}
+$$
+  
+  (sum of squares divided by sample size - 1)
+  
+  * Discussion: joining data frames
+  
+  
