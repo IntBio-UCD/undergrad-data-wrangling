@@ -37,7 +37,9 @@ $$
 $$
   
   (sum of squares divided by sample size - 1)
+  - nested anova
   
-  * Discussion: joining data frames
+  
+* Discussion: joining data frames
   
   

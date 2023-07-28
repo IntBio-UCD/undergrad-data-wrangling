@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
 ```{r}
 library(tidyverse)
 ```
@@ -16,6 +17,9 @@ library(tidyverse)
 
 ```{r}
 dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected.csv")
+
+dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
+
 ```
 ```{r}
 dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
@@ -24,6 +28,16 @@ dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
 ```{r}
 summary(dat)
 ```
+
+```{r}
+head(dat, 90)
+tail(dat, 8)
+```
+
+```{r}
+dat
+```
+
 
 ```{r}
 dat <- dat %>% filter(`germinated?` == 1)
