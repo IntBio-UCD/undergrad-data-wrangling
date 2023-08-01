@@ -183,6 +183,17 @@ ranova(lmer1)
 
 ```{r}
 VarCorr(lmer1) %>% print(comp="Variance")
- ```
+```
 
+```{r}
+lmer2 <- lmer(height_cm ~ (1|parent.pop/mf), data=dat)
+ranova(lmer2)
+```
+
+
+```{r}
+VarCorr(lmer2) %>%
+  as.data.frame() %>%
+  mutate(var.pct = vcov/sum(vcov)*100)
+```
 
