@@ -38,6 +38,7 @@ $$
   
   (sum of squares divided by sample size - 1)
   - nested anova
+  - fixed effects and random effects
   
   
 * Discussion: joining data frames
