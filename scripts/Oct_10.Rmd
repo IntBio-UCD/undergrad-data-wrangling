@@ -1,0 +1,95 @@
+---
+title: "Oct 10--multiple data sheets"
+author: "Julin Maloof"
+date: "2023-10-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+files <- dir("~/Library/CloudStorage/GoogleDrive-jnmaloof@ucdavis.edu/Shared drives/IntBioTeam/Common Gardens/UCD2022_2023/CorrectedCSVs/", 
+             pattern = "Size_survey_transplants.*corrected.*csv",
+            full.names = TRUE)
+files
+```
+
+```{r}
+dat <- tibble(filename = basename (files),
+              path=files)
+dat
+```
+
+```{r}
+dat <- dat %>%
+  mutate(survey_date=str_extract(filename, "2[0-9]*"),
+         survey_date=lubridate::ymd(survey_date))
+dat
+```
+
+
+```{r, eval=FALSE}
+dat <- dat %>%
+  mutate(sheets=map(path, read_csv)) %>%
+  select(-path)
+
+dat
+```
+
+
+
+```{r}
+dat <- dat %>%
+  mutate(sheets=map(path, read_csv, na = c("", "NA", "-"), col_types=cols(.default=col_character()))) %>%
+  select(-path)
+
+dat
+```
+
+
+
+```{r}
+map(dat$sheets, colnames)
+```
+
+```{r}
+dat <- dat %>% unnest(sheets) %>%
+  rename(height_cm = `height (cm)`, longest_leaf_cm = `longest leaf (cm)`)
+dat
+```
+
+```{r}
+dat %>% rowwise() %>% filter(is.na(as.numeric(row)))
+```
+```{r}
+dat <- dat %>% filter(block!="block")
+```
+
+```{r}
+dat %>% rowwise() %>% filter(is.na(as.numeric(row)))
+```
+
+```{r}
+dat %>% rowwise() %>% filter(!pop=="buffer" & is.na(as.numeric(mf)))
+dat[1456,]
+```
+```{r}
+dat %>% rowwise() %>% filter(!pop=="buffer" & is.na(as.numeric(rep)))
+```
+
+```{r}
+dat %>% mutate(Notes=str_replace(Notes, "Dead", "dead")) %>%
+  rowwise() %>% filter(!pop=="buffer" & ! Notes=="dead" & is.na(as.numeric(height_cm)))
+```
+```{r}
+```{r}
+dat %>% mutate(Notes=str_replace(Notes, "Dead", "dead")) %>%
+  rowwise() %>% filter(!pop=="buffer" & ! Notes=="dead" & is.na(as.numeric(longest_leaf_cm)))
+``````
+
