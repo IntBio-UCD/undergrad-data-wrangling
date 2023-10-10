@@ -13,12 +13,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 ```
+
 ## Load and filter the dat
 
 ```{r}
 dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected.csv")
 
+<<<<<<< HEAD
+dat <- read_csv("UCD_garden_size_measurements_20221128_corrected.csv")
+=======
 dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
+>>>>>>> dda18ea9ad84150a3610e4acdd69918f8d46f3e5
 
 ```
 
@@ -31,11 +36,14 @@ summary(dat)
 ```
 
 ```{r}
+<<<<<<< HEAD
+=======
 head(dat, 90)
 tail(dat, 8)
 ```
 
 ```{r}
+>>>>>>> dda18ea9ad84150a3610e4acdd69918f8d46f3e5
 dat
 ```
 
@@ -44,6 +52,22 @@ dat
 dat <- dat %>% filter(`germinated?` == 1)
 summary(dat)
 ```
+
+```{r}
+head(dat, 9)
+
+head(x=dat, n=10)
+
+head(n=10, x=dat)
+
+a <- 4
+a
+
+b = 5
+b
+```
+
+
 ## Summaries
 
 By pop:
@@ -51,16 +75,18 @@ By pop:
 ```{r}
 dat %>% 
   group_by(parent.pop) %>%
-  summarize(Height=mean(`Height (cm)`, na.rm=TRUE), Longest_leaf=mean(`Longest leaf (cm)`, na.rm = TRUE)) %>%
+  summarize(Height=mean(`Height (cm)`, na.rm=TRUE),
+            Longest_leaf=mean(`Longest leaf (cm)`, na.rm = TRUE)) %>%
   arrange(Height)
 ```
 
 By pop and mf:
+
 ```{r}
 dat %>% 
   group_by(parent.pop, mf) %>%
   summarize(Height=mean(`Height (cm)`, na.rm=TRUE), Longest_leaf=mean(`Longest leaf (cm)`, na.rm = TRUE)) %>%
-  arrange(Height)
+  arrange(parent.pop, mf)
 ```
 
 ## Plotting
@@ -73,6 +99,7 @@ dat <- dat %>%
 ```
 
 histogram
+
 ```{r}
 dat %>%
   ggplot(aes(x=longest_leaf_cm)) +
@@ -139,6 +166,7 @@ dat %>%
 Traditional bar plot
 
 First create a new function for sem
+
 ```{r}
 sem <- function(x, na.rm=FALSE) {
   sd(x, na.rm = na.rm) / sqrt(length(na.omit(x)))
@@ -176,11 +204,14 @@ dat.summary %>%
 ## simple anova
 
 one-way
+
 ```{r}
 aov1 <- aov(longest_leaf_cm ~ parent.pop, data = dat)
 summary(aov1)
 ```
+
 nested
+
 ```{r}
 aov2 <- aov(longest_leaf_cm ~ parent.pop/mf, data = dat)
 summary(aov2)
@@ -192,10 +223,11 @@ lmer1 <- lmer(longest_leaf_cm ~ (1|parent.pop/mf), data=dat)
 ranova(lmer1)
 ```
 
-
 ```{r}
 VarCorr(lmer1) %>% print(comp="Variance")
 ```
+<<<<<<< HEAD
+=======
 
 ```{r}
 lmer2 <- lmer(height_cm ~ (1|parent.pop/mf), data=dat)
@@ -209,6 +241,7 @@ VarCorr(lmer2) %>%
   mutate(var.pct = vcov/sum(vcov)*100)
 ```
 
+<<<<<<< HEAD
 ```{r}
 test <- aov(height_cm ~ parent.pop, data = dat)
 summary(test)
@@ -300,3 +333,6 @@ VarCorr(lme1) %>%
 
 
 
+=======
+>>>>>>> dda18ea9ad84150a3610e4acdd69918f8d46f3e5
+>>>>>>> 8df7a6aa2217c292c27cb472f28ff42e6c434855
