@@ -21,6 +21,7 @@ dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected.csv")
 dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
 
 ```
+
 ```{r}
 dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
 ```
@@ -110,7 +111,18 @@ plot per pop:
 
 ```{r}
 dat %>%
-  mutate(parent.pop = fct_reorder(parent.pop, longest_leaf_cm)) %>%
+  ggplot(aes(x=parent.pop, y=longest_leaf_cm)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 33, hjust=.8,vjust=1))
+
+```
+
+
+
+
+```{r}
+dat %>%
+  mutate(parent.pop = fct_reorder(parent.pop, longest_leaf_cm, .desc = TRUE)) %>%
   ggplot(aes(x=parent.pop, y=longest_leaf_cm)) +
   geom_boxplot() +
   theme(axis.text.x = element_text(angle = 90, hjust=1, vjust=.5))
@@ -196,4 +208,95 @@ VarCorr(lmer2) %>%
   as.data.frame() %>%
   mutate(var.pct = vcov/sum(vcov)*100)
 ```
+
+```{r}
+test <- aov(height_cm ~ parent.pop, data = dat)
+summary(test)
+```
+
+```{r}
+test1 <- lmer(height_cm ~ (1|parent.pop), data=dat)
+VarCorr(test1) %>%
+  as.data.frame() %>%
+  mutate(var.pct = vcov/sum(vcov)*100)
+```
+
+
+```{r}
+dat
+```
+
+```{r}
+aov1 <- aov(height_cm ~ parent.pop, data=dat)
+summary(aov1)
+```
+
+```{r}
+aov2 <- aov(height_cm ~ parent.pop/mf, data=dat)
+summary(aov2)
+```
+
+
+```{r}
+library(lmerTest)
+```
+
+```{r}
+lme1 <- lmer(height_cm ~ (1|parent.pop/mf), data=dat)
+```
+
+```{r}
+summary(lme1)
+```
+
+```{r}
+ranova(lme1)
+```
+
+
+```{r}
+VarCorr(lme1) %>%
+  as.data.frame() %>%
+  mutate(var.pct = vcov/sum(vcov)*100)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
