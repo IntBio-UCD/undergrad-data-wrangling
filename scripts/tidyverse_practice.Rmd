@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
 ```{r}
 library(tidyverse)
 ```
@@ -18,7 +19,11 @@ library(tidyverse)
 ```{r}
 dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected.csv")
 
+<<<<<<< HEAD
 dat <- read_csv("UCD_garden_size_measurements_20221128_corrected.csv")
+=======
+dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
+>>>>>>> dda18ea9ad84150a3610e4acdd69918f8d46f3e5
 
 ```
 
@@ -31,6 +36,14 @@ summary(dat)
 ```
 
 ```{r}
+<<<<<<< HEAD
+=======
+head(dat, 90)
+tail(dat, 8)
+```
+
+```{r}
+>>>>>>> dda18ea9ad84150a3610e4acdd69918f8d46f3e5
 dat
 ```
 
@@ -202,3 +215,19 @@ ranova(lmer1)
 ```{r}
 VarCorr(lmer1) %>% print(comp="Variance")
 ```
+<<<<<<< HEAD
+=======
+
+```{r}
+lmer2 <- lmer(height_cm ~ (1|parent.pop/mf), data=dat)
+ranova(lmer2)
+```
+
+
+```{r}
+VarCorr(lmer2) %>%
+  as.data.frame() %>%
+  mutate(var.pct = vcov/sum(vcov)*100)
+```
+
+>>>>>>> dda18ea9ad84150a3610e4acdd69918f8d46f3e5
