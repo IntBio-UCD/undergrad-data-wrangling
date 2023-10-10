@@ -19,12 +19,6 @@ library(tidyverse)
 ```{r}
 dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected.csv")
 
-<<<<<<< HEAD
-dat <- read_csv("UCD_garden_size_measurements_20221128_corrected.csv")
-=======
-dat <- read_csv("../input/UCD_garden_size_measurements_20221128_corrected2.csv")
->>>>>>> dda18ea9ad84150a3610e4acdd69918f8d46f3e5
-
 ```
 
 ```{r}
@@ -36,14 +30,11 @@ summary(dat)
 ```
 
 ```{r}
-<<<<<<< HEAD
-=======
 head(dat, 90)
 tail(dat, 8)
 ```
 
 ```{r}
->>>>>>> dda18ea9ad84150a3610e4acdd69918f8d46f3e5
 dat
 ```
 
@@ -226,8 +217,7 @@ ranova(lmer1)
 ```{r}
 VarCorr(lmer1) %>% print(comp="Variance")
 ```
-<<<<<<< HEAD
-=======
+
 
 ```{r}
 lmer2 <- lmer(height_cm ~ (1|parent.pop/mf), data=dat)
@@ -241,7 +231,6 @@ VarCorr(lmer2) %>%
   mutate(var.pct = vcov/sum(vcov)*100)
 ```
 
-<<<<<<< HEAD
 ```{r}
 test <- aov(height_cm ~ parent.pop, data = dat)
 summary(test)
@@ -293,46 +282,3 @@ VarCorr(lme1) %>%
   mutate(var.pct = vcov/sum(vcov)*100)
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-=======
->>>>>>> dda18ea9ad84150a3610e4acdd69918f8d46f3e5
->>>>>>> 8df7a6aa2217c292c27cb472f28ff42e6c434855
