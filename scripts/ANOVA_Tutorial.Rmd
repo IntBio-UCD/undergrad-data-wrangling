@@ -1,0 +1,36 @@
+---
+title: "ANOVA tutorial"
+author: "Julin Maloof"
+date: "2023-08-29"
+output: html_document
+---
+
+Running through https://ourcodingclub.github.io/tutorials/anova/
+
+```{r}
+library(tidyverse)
+```
+
+What is different about out data set relative to the example?
+
+What is similar?
+
+What is a response variable and a predictor variable in our data set?
+
+```{r}
+dat <- read_csv("../input/frogs_messy_data.csv")
+dat
+```
+
+```{r}
+tidy <- dat %>% 
+  pivot_longer(cols = starts_with("Temperature"), values_to = "Hatching_time", names_to = "Temperature", values_drop_na = TRUE )
+
+tidy
+```
+
+```{r}
+aov1 <- aov(Hatching_time ~ Temperature, data=tidy)
+summary(aov1)
+```
+

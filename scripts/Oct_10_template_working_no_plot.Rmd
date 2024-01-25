@@ -1,0 +1,285 @@
+---
+title: "Oct 10--multiple data sheets"
+author: "Julin Maloof"
+date: "2023-10-08"
+output: html_document
+---
+
+## Intro
+The goal is to import all of the size survey data sheets for the transplants into a single tibble.  We will work through the commands and challenges of doing this
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+## Github
+Let's practice working with github.  Go to your github account and create a new repository "UCD-2022-Transplant-Growth" (or something similar).
+
+* Clone this to your computer and make sure Rstudio is set to use it as the working directory.
+* Create folders inside of this repo `scripts`, `input`, and `output`.
+* Unzip the `CorrectedCSVs.zip` file that Julin gave you into the  `input` directory
+* Create a new .Rmd script inside of scripts `DataImport.Rmd` or something similar.
+
+## Get a list of files
+
+Use code chunks in the `DataImport.Rmd` as we work through the rest of this.
+
+You can get a list of files in a directory with the `dir` command.  By default this lists files in the current working directory
+```{r}
+files <- dir()
+files
+```
+
+
+You can specify a different directory by specifying the path
+```{r}
+files <- dir("../input/CorrectedCSVs/") 
+files
+```
+You can specify what files you want using the pattern argument.  Modify the code below so that you only retrieve size survey transplant csv files.  You will need to use the _regex_ method of specifying wildcards:
+```{r}
+files <- dir("../input/CorrectedCSVs",
+             pattern="Size_survey_transplants.*corrected.*csv")
+files
+```
+
+Finally, when can specify `full.names=TRUE` to get the full path, which we will need later on
+
+```{r}
+files <- dir("../input/CorrectedCSVs/",
+             pattern="Size_survey_transplants.*corrected.*csv",
+             full.names=TRUE)
+files
+```
+
+## Create a tibble to hold the imported data
+
+We will use a tibble to hold our imported data.  We will start by creating a column with the full pathname and the file name:
+
+```{r}
+dat <- tibble(path=files, filename=basename(path))
+dat
+```
+
+What did the `basename` function do?
+
+Next, use what you learned in the regex tutorial to create a new column "survey_date", extracted from the filename
+
+```{r}
+# create a new column, "date"
+dat <- dat %>%
+  mutate(survey_date=str_extract(filename, "2[0-9]*"),
+         survey_date=lubridate::ymd(survey_date))
+dat
+
+```
+
+Once you have the date column, we can tell R to use it as a date with the `ymd` function.  (Note there are other variants as well...)
+```{r}
+dat <- dat %>%
+  mutate(survey_date=lubridate::ymd(survey_date))
+dat
+```
+
+## Read in the files
+
+As you know, we can use `read_csv` to read in csv files.  We don't want to have to type a separate `read_csv` command for each file that we want to read.  Luckily there is a way to automate the process.
+
+We will use the `map()` function to help us.  `map` applies a function to each element of a list
+
+Example:
+```{r}
+map(1:10, sum, 5)
+```
+
+What did the above code do?
+
+So, to import:
+```{r}
+dat <- dat %>%
+  mutate(sheets=map(path, 
+                    read_csv, 
+                    col_types=cols(.default=col_character()), # forces all columns to be character
+                                                              # this is needed because of data sheet problems that cause some numerics to be imported as character  
+                    na = c("", "NA", "-") # sets NA strings.  Julin to explain in meeting.
+                    )) %>%
+  select(-path)
+
+dat
+```
+
+
+Now we have a new column "sheets" and each element of sheets is one imported csv file.  You can check this with:
+
+```{r}
+dat$sheets[[1]] # extract the first imported sheet.
+```
+
+
+## Combine the data
+
+We would like to get all of those datasheets combined into a single one.  Before we do that we want to make sure that the column names are consistent.  We can look at the column names by using map again:
+
+```{r}
+map(dat$sheets, colnames)
+```
+
+It could be useful to look at all of the unique column names
+
+```{r}
+map(dat$sheets, colnames) %>%
+  unlist() %>%
+  unique() %>%
+  sort()
+```
+
+Next let's take a look at the first 10 lines of each data sheet, again using `map`
+```{r}
+map(dat$sheets, head,10)
+```
+Any issues?  (will discuss in live meeting)
+
+Now let's combine the data.  The `unnest()` function will attempt to combine all of the individual data frames into one.  While we are at it, let's rename a couple of the columns for convenience:
+
+```{r}
+dat <- dat %>% unnest(sheets) %>%
+  rename(height_cm = `height (cm)`, longest_leaf_cm = `longest leaf (cm)`)
+dat
+```
+
+What are columns ...10 and ...12?
+
+```{r}
+dat %>% filter(!is.na(...10) | !is.na(...12))
+```
+nothing to worry about
+
+
+## Fix the data problems
+
+OK, row should be numeric, but isn't.  Let's see why not
+
+This code goes row-by-row and keeps the rows where `row` cannot be converted to numeric.
+```{r}
+dat %>% rowwise() %>% filter(is.na(as.numeric(row)))
+```
+
+What is the problem?
+
+What is the fix?
+
+
+```{r}
+dat <- dat %>% filter(block!="block")
+```
+
+```{r}
+dat %>% rowwise() %>% filter(is.na(as.numeric(row)))
+```
+
+
+Next steps: check the other columns that should be numeric, and fix if needed.
+
+```{r}
+dat %>% rowwise() %>% filter(is.na(as.numeric(mf)))
+```
+get rid of buffers
+```{r}
+dat <- dat %>% filter(pop!="buffer")
+```
+
+```{r}
+dat %>% rowwise() %>% filter(is.na(as.numeric(mf)))
+```
+Why no mf for these two entries?  Doesn't really matter since there is no data in those rows...
+
+```{r}
+dat %>% rowwise() %>% filter(is.na(as.numeric(rep)))
+```
+
+checking height
+```{r}
+dat %>% rowwise() %>% filter(is.na(as.numeric(height_cm)))
+```
+This gives us any row with an NA.  What we really want is rows that generate an NA on conversion to numeric,
+so...
+
+```{r}
+dat %>% rowwise() %>% filter(!is.na(height_cm), is.na(as.numeric(height_cm)))
+```
+
+checking longest leaf
+```{r}
+dat %>% rowwise() %>% filter(!is.na(longest_leaf_cm), is.na(as.numeric(longest_leaf_cm)))
+```
+
+ignoring the issues
+```{r}
+dat2 <- dat %>%
+  mutate(across(c(longest_leaf_cm, height_cm), as.numeric))
+```
+To get your plots to work, you may need to create a plantID column that contains a unique ID for each plant and then use it as the `group` aesthetic in ggplot.  I've started that for you below.
+
+
+```{r}
+dat2 %>% pull(pop) %>% unique
+```
+
+```{r}
+dat3 <- dat2 %>%
+  mutate(pop=str_replace(pop, ".*VTR.*", "LVTR1"))
+
+dat3 %>% pull(pop) %>% unique()
+```
+
+```{r}
+dat3 <- dat2 %>%
+  mutate(pop=str_replace(pop, "^(VTR|\\.VTR|LVTR|LVTR 1)$", "LVTR1"))
+
+dat3 %>% pull(pop) %>% unique()
+```
+
+
+```{r}
+dat3 <- dat2 %>%
+  mutate(pop=ifelse(str_detect(pop, "VTR"), "LVTR1", pop))
+
+dat3 %>% pull(pop) %>% unique()
+```
+
+
+```{r}
+dat4 <- dat3 %>%
+  filter(height_cm < 600)
+```
+
+
+
+```{r}
+dat4 %>% mutate(plantID=str_c(block,row,col)) %>%
+  ggplot(aes(group=plantID, x=survey_date, y=height_cm, col=pop)) +
+  geom_line()
+```
+
+```{r}
+dat4 %>% mutate(plantID=str_c(block,row,col)) %>%
+  ggplot(aes(group=plantID, x=survey_date, y=height_cm, col=pop)) +
+  geom_line() +
+  facet_wrap(~pop)
+```
+
+
+```{r}
+dat4 %>% 
+   mutate(plantID=str_c(block,row,col)) %>%
+  group_by(pop) %>%
+  filter(n() > 10) %>%
+  ggplot(aes(x=survey_date, y=height_cm, col=pop)) +
+  geom_smooth() 
+```
+
+

@@ -1,0 +1,248 @@
+---
+title: "Growth Curves"
+author: "Julin Maloof"
+format:
+  revealjs:
+    theme: sky
+    margin: 0.075
+    code-line-numbers: false
+    embed-resources: true
+    smaller: true
+    scrollable: true
+    incremental: true
+---
+
+```{r}
+library(tidyverse)
+library(nlme)
+```
+
+```{r}
+dat <- read_csv("../output/height_data_clean.csv")
+```
+
+```{r}
+tdb <- dat %>%
+  filter(str_detect(pop, "TM2|DPR|BH"))
+```
+
+## Objectives
+
+**Do the different populations grow at different rates?**
+
+```{r}
+tdb %>% ggplot(aes(x=survey_date, y=height_cm, col=pop)) +
+  geom_line(aes(group=plantID), alpha=.3) +
+  geom_smooth(se=FALSE)
+```
+
+-   How do we do this?
+-   What are some challenges?
+
+## If growth were simple
+
+```{r}
+ggplot() +
+  geom_abline(slope=1.3, col="blue") +
+  geom_abline(slope=1, col="red") +
+  xlim(c(1,20)) +
+  ylim(c(1,20)) +
+  xlab("time") +
+  ylab("height")
+```
+
+$$
+height = Intercept + slope * time + Error
+\\
+height = Intercept + slope_{pop} * time + Error
+$$
+
+## What do we do with this?
+
+```{r}
+tdb %>% ggplot(aes(x=survey_date, y=height_cm, col=pop)) +
+  geom_smooth()
+```
+
+Need a mathematical equation that produces these types of curves
+
+## Weibull to the rescue
+
+There are actually a dozen or more equations that fit this type of data. Some are listed [here](https://www.pisces-conservation.com/growthhelp/index.html)
+
+We will use the Weibull model
+
+$$
+y(t) = \alpha - \beta \cdot e^{-(k \cdot t)^\delta}
+$$
+This models height (y) at time $t$ as a function of parameters $\alpha$, $\beta$, $k$, and $\delta$
+
+Lets play around to see what each of these does
+
+## Weibull function in R
+
+```{r, echo=TRUE}
+weibull <- function (t, alpha, beta, k, delta) {
+  result <- alpha - (alpha - beta) * exp(-(k * t)^delta)
+  return(result)
+}
+
+growth <- tibble(time = seq(0,100,.1)) %>%
+  mutate(model1 = weibull(t = time,
+                          alpha = 60,
+                          beta = 10,
+                          k = .02,
+                          delta = 5))
+```
+
+
+```{r, echo=FALSE}
+growth %>%  ggplot(aes(x=time, y=model1)) +
+  geom_line()
+```
+
+## Exercise 1 
+::: {.nonincremental}
+a) Plot the results of this code
+b) adjust the parameters to determine how each one affects the curve.  __Only change one at a time__
+:::
+```{r, echo=TRUE}
+weibull <- function (t, alpha, beta, k, delta) 
+{
+  result <- alpha - (alpha - beta) * exp(-(k * t)^delta)
+  return(result)
+}
+
+growth <- tibble(time = seq(0,50,.1)) %>%
+  mutate(model1 = weibull(t = time,
+                          alpha = 100,
+                          beta = 10,
+                          k = .05,
+                          delta = 3))
+```
+
+## Exercise 2
+
+Use the cleaned data sent by Julin to generate this plot:
+
+```{r}
+tdb %>% ggplot(aes(x=survey_date, y=height_cm, col=pop)) +
+  geom_line(aes(group=plantID), alpha=.3) +
+  geom_smooth(se=FALSE)
+```
+
+# The next problem: Parameter Estimation
+
+## Parameter estimation {.smaller}
+
+* We need a statistical model that fits our data.
+* __Parameters__ are the model coefficients that are tuned to achieve a fit between a statistical model and data.
+* For a linear regression the model parameters are the Intercept(s) and slope(s)
+* In the plot below we might want a model that describes the relationship between engine size and m.p.g.  
+* I show two different models.  Which fits the data better?
+* What is the statistical criteria for judging fit?
+
+```{r}
+mpgsmall <- mpg %>% filter(!duplicated(displ), displ <=5, hwy < 40) 
+
+lm.mpg <- lm(cty ~ displ, data=mpgsmall)
+
+mpgsmall$predicted_good <- predict(lm.mpg)
+
+int.bad <- 20
+
+slope.bad <- -1.2
+
+mpgsmall$predicted_bad <- int.bad + mpgsmall$displ*slope.bad
+
+y1bad <- int.bad + slope.bad * min(mpgsmall$displ)
+y2bad <- int.bad + slope.bad * max(mpgsmall$displ)
+
+goodfit <- mpgsmall%>%
+  ggplot(aes(x=displ, y=cty)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_segment(aes(xend=displ, yend=predicted_good),lty=2) +
+  geom_point(aes(y=predicted_good), color="skyblue") +
+  xlab("Engine displacement (L)") +
+  ylab("City m.p.g") +
+  ggtitle("fit 2")
+
+badfit <- mpgsmall%>%
+  ggplot(aes(x=displ, y=cty)) +
+  geom_point() +
+  geom_segment(aes(xend=displ, yend=predicted_bad),lty=2) +
+  geom_segment(x=min(mpgsmall$displ), y=y1bad, xend=max(mpgsmall$displ), yend=y2bad, color="darkred") +
+  geom_point(aes(y=predicted_bad), color="red") +
+  xlab("Engine displacement (L)") +
+  ylab("City m.p.g") +
+  ggtitle("fit 1")
+
+gridExtra::grid.arrange(badfit, goodfit, ncol=2)
+```
+
+## Judge fit by SSE {.smaller}
+
+* A classic way to judge goodness of fit is by the sum squared error (SSE):
+
+$\sum\limits_{i=1}^N(obs_i - predicted_i)^2$
+
+* OK, but how do we find the parameters the minimize SSE?
+* For linear regressions this can be mathematically solved
+* For non-linear models, such as the Weibull growth model, it is essentially trial and error.
+* The computer picks a set of parameter values, calulates SSE, and then picks a new set. 
+* If the new set is better than the old set, keep the new values
+* repeat until SSE is stable
+* There are _very_ sophisticated algorithms to do this.
+
+## Let's give it a try!
+
+```{r, echo=TRUE}
+tm2 <- tdb %>% filter(pop=="TM2") %>%
+  mutate(day=as.numeric(survey_date-min(survey_date)+30),
+         mf=factor(mf))
+
+m1 <- nls(height_cm ~ weibull(day, alpha, beta, k, delta),
+          data=tm2,
+          start = c(alpha=60, beta=1, k = .02, delta = 5), 
+          lower = c(20, 0, 0, 2),
+          upper = c(120, 20, .5, 10),
+          trace = TRUE, 
+          algorithm = "port")
+```
+
+
+```{r, eval=FALSE}
+#alternate not woking
+m2 <- nlme(height_cm ~ weibull(day, alpha, beta, k, delta),
+           data=tm2,
+           fixed = alpha + beta + k + delta ~ 1,
+           groups = ~ mf,
+           random = beta ~ 1,
+           start = c(alpha=60, beta=1, k = .02, delta = 5), 
+)
+```
+
+## look at the result and make predictions
+
+```{r, echo = TRUE}
+m1
+
+tm2 <- tm2 %>% mutate(pred=predict(m1))
+```
+
+## plot it
+
+```{r, echo=TRUE}
+tm2 %>%
+  ggplot(aes(x=day)) +
+  geom_line(aes(y=height_cm, group=plantID), alpha = 0.3) +
+  geom_line(aes(y=pred), lwd=2, color="red") 
+
+```
+
+
+## problems
+
+* Need to compare between populations
+* Want p-values, statistical inference

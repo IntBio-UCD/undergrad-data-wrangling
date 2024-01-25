@@ -1,0 +1,33 @@
+---
+title: "Growth Curves"
+author: "Julin Maloof"
+date: "2024-01-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+## import data
+
+```{r}
+dat <- read_csv("../output/height_data_clean.csv")
+```
+
+```{r}
+tmbh <- dat %>%
+  filter(str_detect(pop, "TM2|BH"))
+```
+
+```{r}
+tmbh %>% ggplot(aes(x=survey_date, y=height_cm, col=pop)) +
+  geom_line(aes(group=plantID), alpha=.3) +
+  geom_smooth(se=FALSE)
+```
+
