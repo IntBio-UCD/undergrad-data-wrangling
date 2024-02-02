@@ -19,6 +19,7 @@ library(nlme)
 
 ```{r}
 dat <- read_csv("../output/height_data_clean.csv")
+dat
 ```
 
 ```{r}
@@ -91,16 +92,31 @@ growth <- tibble(time = seq(0,100,.1)) %>%
   mutate(model1 = weibull(t = time,
                           alpha = 60,
                           beta = 10,
-                          k = .02,
-                          delta = 5))
-```
+                          k = .03,
+                          delta = 3))
 
-
-```{r, echo=FALSE}
 growth %>%  ggplot(aes(x=time, y=model1)) +
   geom_line()
 ```
 
+
+
+```{r, echo=TRUE}
+weibull <- function (t, alpha, beta, k, delta) {
+  result <- alpha - (alpha - beta) * exp(-(k * t)^delta)
+  return(result)
+}
+
+growth <- tibble(time = seq(0,100,.1)) %>%
+  mutate(model1 = weibull(t = time,
+                          alpha = 60,
+                          beta = 10,
+                          k = .06,
+                          delta = 3))
+
+growth %>%  ggplot(aes(x=time, y=model1)) +
+  geom_line()
+```
 ## Exercise 1 
 ::: {.nonincremental}
 a) Plot the results of this code
@@ -115,10 +131,10 @@ weibull <- function (t, alpha, beta, k, delta)
 
 growth <- tibble(time = seq(0,50,.1)) %>%
   mutate(model1 = weibull(t = time,
-                          alpha = 100,
+                          alpha = 60,
                           beta = 10,
-                          k = .05,
-                          delta = 3))
+                          k = .02,
+                          delta = 5))
 ```
 
 ## Exercise 2
@@ -237,10 +253,72 @@ tm2 <- tm2 %>% mutate(pred=predict(m1))
 tm2 %>%
   ggplot(aes(x=day)) +
   geom_line(aes(y=height_cm, group=plantID), alpha = 0.3) +
-  geom_line(aes(y=pred), lwd=2, color="red") 
+  geom_line(aes(y=pred), lwd=2, color="red") +
+  geom_smooth(aes(y=height_cm), se=FALSE, lty=2)
 
 ```
 
+## BH
+
+```{r, echo = TRUE}
+bh <- tdb %>% filter(pop=="BH") %>%
+  mutate(day=as.numeric(survey_date-min(survey_date)+30),
+         mf=factor(mf))
+
+m1.bh <- nls(height_cm ~ weibull(day, alpha, beta, k, delta),
+          data=bh,
+          start = c(alpha=60, beta=1, k = .02, delta = 5), 
+          lower = c(20, 0, 0, 2),
+          upper = c(120, 20, .5, 10),
+          trace = TRUE, 
+          algorithm = "port")
+
+m1.bh
+
+bh <- bh %>% mutate(pred=predict(m1.bh))
+```
+
+## plot it
+
+```{r, echo=TRUE}
+bh %>%
+  ggplot(aes(x=day)) +
+  geom_line(aes(y=height_cm, group=plantID), alpha = 0.3) +
+  geom_line(aes(y=pred), lwd=2, color="red") +
+  geom_smooth(aes(y=height_cm), se=FALSE, lty=2)
+
+```
+
+## dpr
+
+```{r, echo = TRUE}
+dpr <- tdb %>% filter(pop=="DPR") %>%
+  mutate(day=as.numeric(survey_date-min(survey_date)+30),
+         mf=factor(mf))
+
+m1.dpr <- nls(height_cm ~ weibull(day, alpha, beta, k, delta),
+          data=dpr,
+          start = c(alpha=60, beta=1, k = .02, delta = 5), 
+          lower = c(20, 0, 0, 2),
+          upper = c(120, 20, .5, 10),
+          trace = TRUE, 
+          algorithm = "port")
+
+m1.dpr
+
+dpr <- dpr %>% mutate(pred=predict(m1.dpr))
+```
+
+## plot it
+
+```{r, echo=TRUE}
+dpr %>%
+  ggplot(aes(x=day)) +
+  geom_line(aes(y=height_cm, group=plantID), alpha = 0.3) +
+  geom_line(aes(y=pred), lwd=2, color="red")  +
+  geom_smooth(aes(y=height_cm), se=FALSE, lty=2)
+
+```
 
 ## problems
 

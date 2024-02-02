@@ -1,0 +1,95 @@
+---
+title: "Intro Brms"
+author: "Julin Maloof"
+date: "2024-02-02"
+output: html_document
+---
+
+## Notes
+
+* idea of sampling, so we don't know true mean or SD or difference is
+* probability of model|data vs probability of data|model
+* prior probabilitiy
+* posterior distribution
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(brms)
+```
+
+get the data
+
+```{r}
+dat <- read_csv("../output/height_data_clean.csv")
+```
+
+```{r}
+head(dat)
+```
+
+```{r}
+dat$survey_date %>% table
+```
+
+
+```{r}
+datsmall <- dat %>% filter(survey_date=="2023-01-27") 
+
+datbcd <- datsmall %>% filter(str_detect(pop, "BH|CC|DPR"))
+
+```
+
+```{r}
+m1 <- brm(height_cm ~ pop,
+          data = datbcd,
+          prior = set_prior("normal(0,10)", class = "b"),
+          threads = 4)
+```
+
+```{r}
+summary(m1)
+```
+
+```{r}
+plot(m1)
+```
+
+```{r}
+m2 <- brm(height_cm ~ (1|pop) + (1|block), data=datsmall)
+```
+
+```{r}
+summary(m2)
+plot(m2)
+```
+
+```{r}
+m3 <- brm(height_cm ~ (1|pop), data=datsmall)
+
+```
+
+```{r}
+summary(m3)
+plot(m3)
+```
+
+```{r}
+m4 <- brm(height_cm ~  (1|block), data=datsmall)
+m5 <- brm(height_cm ~ 1, data = datsmall)
+
+```
+
+
+```{r}
+m2 <- add_criterion(m2, "loo")
+m3 <- add_criterion(m3, "loo")
+m4 <- add_criterion(m4, "loo")
+m5 <- add_criterion(m5, "loo")
+
+loo_compare(m2, m3, m4, m5)
+```
+
