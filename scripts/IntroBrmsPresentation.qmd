@@ -1,0 +1,358 @@
+---
+title: "A micro introduction to Bayesian modeling with BRMS"
+author: "Julin Maloof"
+format:
+  revealjs:
+    theme: sky
+    margin: 0.075
+    code-line-numbers: false
+    embed-resources: true
+    smaller: true
+    scrollable: true
+    incremental: true
+---
+
+```{r}
+library(tidyverse)
+library(brms)
+```
+
+## Frequentist vs Bayesian Statistics
+
+:::: {.columns}
+
+::: {.column width="50%" .nonincremental}
+__Frequentist Statistics__
+
+* What is the probability of the _data_ given a hypothesis
+* Theory relies on data that is not observed
+* Accept or reject null hypothesis
+* Does not require use of priors
+:::
+
+::: {.column width="50%" .nonincremental}
+__Bayesian__
+
+* What is the probability of the _hypothesis_ given the data
+* Does not rely on unobserved data
+* Evaluate ratio of probabilities for different hypotheses
+* Requires specification of prior beliefs (not as bad as it sounds!)
+:::
+
+::::
+
+## Prior probabilities
+* Bayesian methods require that we specify __prior probabilities__ on the model parameters
+* This might sound like we are cheating
+* Instead we use relatively __uninformative priors__
+* As long as we have set relatively weak (uninformative) priors, the data will overwhelm the priors
+* (Although if we do have prior information we can use informative priors)
+
+## Sampling
+* Bayesian model fitting requires sampling different parameter values
+* For each set of parameters test, calculate the probability of the model, given the data
+  - Similar to what we discussed two weeks ago with the `nls` function
+* Difference is that for `nls` the goal was just to find the "BEST" set of parameters
+* For Bayesian we need to sample enough to define the probability "landscape"
+* Typically several thousand sets of parameter values are sampled
+
+## Posterior probabilities
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+* One output of Bayesian model fitting is a set of __posterior probabilities__ 
+* These will give us the distribution of possible parameter values for each model parameter, given the data and the priors
+* We can do further tests/comparisons once we have these posterior probabilities
+
+:::
+
+::: {.column width="50%" .nonincremental}
+
+```{r}
+
+
+
+tibble(slope=sample(seq(6,14, by = 0.01), size = 1000, replace = TRUE ),
+       probability = dnorm(slope, mean=10)) %>%
+       # probability=ifelse(slope < 10,
+       #                    pnorm(q = slope, mean=10),
+       #                    pnorm(q = slope, mean=10, lower.tail = FALSE))) %>%
+  ggplot(aes(x=slope,y=probability)) +
+  geom_point(alpha=.1) +
+  ggtitle("Posterior Probability")
+```
+:::
+
+::::
+
+
+## Diagnostics
+* It is critically important to evaluate whether the sampling worked well
+* Typically four sampling "chains" are run
+* `Rhat` compares variance between and within chains.  Should be < 1.05
+* `ESS` (Effective sampling size) should be > 100 per chain
+
+## Let's try it {.nonincremental}
+
+```{r, echo=TRUE, eval=TRUE}
+library(tidyverse)
+library(brms)
+dat <- read_csv("../output/height_data_clean.csv")
+```
+
+Please create two objects 
+
+* `datsmall` that only retains observations from "2023-01-27"
+* `datbcd` that only retains  BH, CC, and DPR observations from "2023-01-27"
+```{r}
+datsmall <- dat %>% filter(survey_date=="2023-01-27") 
+
+datbcd <- datsmall %>% filter(str_detect(pop, "BH|CC|DPR"))
+```
+
+## Check the number of "cores" on our computer {.notincremental}
+
+* Most computers have multiple "cores" or CPUs that can be used in parallel.  
+* Let's check what we have.  We will use this on the next slide.
+```{r, echo=TRUE}
+parallel::detectCores()
+```
+
+## What are the default priors?
+* We will use what should now be a familiar formula to specify our model
+* We can ask what priors would be used by default for our formula and data
+```{r, echo=TRUE}
+get_prior(height_cm ~ pop, 
+          data = datbcd)
+```
+* They "b" class are the coefficients on fixed effects.
+* They have a flat prior (all values from -Infinity to +Infinity are equally likely)
+* We can do better than this while still not biasing the model (next slide)
+* Student_t is like a fat-tailed normal distribution.
+  - The intercept is centered at 3.5, 
+  - sigma (standard deviation) is centered at 0
+  
+## Student vs normal
+```{r}
+tibble(x=seq(-10,10,.1),
+       normal=dnorm(x,sd=2.5),
+       student_t=dstudent_t(x, 3, sigma = 2.5)) %>%
+  pivot_longer(-x) %>%
+  ggplot(aes(x=x,y=value, color=name)) +
+  geom_line() +
+  ggtitle("Normal vs Student_t, sd=2.5")
+```
+
+
+## Fit a model with height being predicted by pop {.notincremental}
+```{r, echo=TRUE, eval=FALSE}
+m1 <- brm(height_cm ~ pop,
+          data = datbcd,
+          prior = set_prior("normal(0,10)", class = "b"),
+          sample_prior = TRUE,
+          threads = 4) # set to 1 if you only have 1 core, or 2 if you have 2.
+                       # don't go higher than 4, even if you have more than 4 cores.    
+```
+
+* We use an uninformative prior for "b", the coefficient for differences between pops
+  - We are setting this prior to be normally distributed, centered on 0, with a standard deviation of 10
+  - Note "b" refers to any fixed-effect coefficients.  If we had multiple fixed effects we could give them all the same prior, or we could specify them individually.
+* By default brms uses 4 chains `threads = 4` means that we want each chain to run in parallel in a different CPU in our computer.
+* By default, each chain has 1,000 warm-up samples and 1,000 real samples
+
+## Fit a model with height being predicted by pop
+```{r, echo=TRUE, eval=TRUE}
+m1 <- brm(height_cm ~ pop,
+          data = datbcd,
+          prior = set_prior("normal(0,10)", class = "b"),
+          sample_prior = TRUE,
+          threads = 4)
+```
+
+The output shows us the progress of each chain
+
+## Model summary
+
+```{r, echo=TRUE}
+summary(m1)
+```
+* `Estimate` is the estimated height
+  - `Intercept` is for the reference population (BH in this case)
+  - `popCC` is the estimated difference between CC and BH
+* 95% confidence intervals show our confidence in the estimate.  
+  If they do not cross 0, then we are at least 95% confident that our differences are real
+* Be sure to check `Rhat` and the two `ESS` stats.  What did we want these to be?
+
+## Model plots
+
+```{r, echo=TRUE}
+plot(m1)
+```
+* On the left we see the distribution of the posterior probability 
+  - Check for unusual pattern, bimodality, etc.
+  - If the posterior is near the edge of the range of the prior, consider adjusting the prior
+* On the right we see the value for each parameter for each sample of each chain
+  - Should look relatively uniform from left to right and chains should look similar
+  
+## what are the other priors?
+
+Our posterior plots had two coefficients that we did not specify priors for.  What was used?
+
+```{r}
+prior_summary(m1)
+```
+
+
+## Bayesian hypothesis testing
+
+* Is popCC really different from popBH?
+* Looking for 
+  - `Post_prob` to be near 1 (probability that hypothesis is true)
+  - `Evid.Ratio` to > 3 (>3 = "moderate evidence", > 10 = "strong evidence")
+```{r, echo=TRUE}
+hypothesis(m1, hypothesis = "popCC > 0")
+```
+
+
+## Getting posterior probability for an estimate {.notincremental}
+Sometime I prefer to do this by "hand"
+```{r, echo=TRUE}
+posterior <- m1 %>% as_draws_df()
+dim(posterior)
+head(posterior)
+```
+
+```{r}
+posterior %>% 
+  summarize(CC_greater_than_zero = sum(b_popCC > 0)/n())
+```
+* All 4000 posterior samples estimate the the CC coefficient is > 0
+* This is very strong evidence the CC height is greater than BH height
+
+## Bayesian hypothesis testing
+
+* Is popCC the same height as popDPR?
+* Looking for 
+  - `Post_prob` to be near 1 (probability that hypothesis is true)
+  - `Evid.Ratio` to > 3 (>3 = "moderate evidence", > 10 = "strong evidence")
+```{r, echo=TRUE}
+hypothesis(m1, hypothesis = "popCC = popDPR")
+```
+
+## Fit a model with random effects:
+
+* Really pop and block should probably both be random, but we will keep pop fixed for now
+```{r, echo=TRUE}
+m2 <- brm(height_cm ~ pop + (1|block),
+          data = datbcd,
+          prior = set_prior("normal(0,10)", class = "b"),
+          sample_prior = TRUE,
+          threads = 4)
+```
+
+## what priors were used for random effects?
+```{r, echo=TRUE}
+prior_summary(m2)
+```
+## Check it (do your own)
+
+## summary
+```{r}
+summary(m2)
+```
+
+## plots
+```{r}
+plot(m2)
+```
+
+
+## Is it better than the model without the random effect?
+
+```{r, echo=TRUE}
+m1 <- add_criterion(m1, "loo")
+m2 <- add_criterion(m2, "loo")
+loo_compare(m1, m2)
+```
+
+* Preferred model is listed first
+* `elpd_diff` is how much worse a model is relative to the preferred model
+* Want this to be greater (ideally 2X greater) than `se_diff` to favor the more complex model
+
+#
+
+Weibull in brms
+
+## Data set:
+Use the full data set today
+```{r}
+dat <- read_csv("../output/height_data_clean.csv")
+
+dat <- dat %>%
+  mutate(day=as.numeric(survey_date-min(survey_date)+30),
+         mf=factor(mf))
+```
+
+
+## Non-linear model specification in brms
+
+Our formula specification is a bit more complex, so we use the function `brmsformula` to define the non-linear formula.
+
+I am also going to rename a couple of the parameters to be more clear
+```{r, echo=TRUE}
+f1 <- brmsformula(height_cm ~ Hmax - (Hmax - Hmin) * exp(-(k * day)^delta),
+                  Hmax + Hmin + k + delta ~ 1,
+                  nl=TRUE)
+```
+
+* The first line should look familiar (Weibull formula)
+* The second line is new, and it defines how each parameter should be fit with respect to the predictors in our data set.
+* The notation `Hmax + Hmin + k + delta ~ 1` means that we want a single parameter value for each of the four parameters
+* `nl=TRUE` tells brms that this is a non-linear formula.
+
+## get the priors
+
+Please review your notes and figure out how to get the possible priors for the formula on the previous slide
+
+```{r}
+get_prior(f1, data=dat)
+```
+## Set the priors
+
+What priors should we use?
+
+Once we decide we can set them like this
+
+```{r echo=TRUE. eval=FALSE}
+prior1 <- c(set_prior("normal(10,10)", lb=0, nlpar="Hmin"),
+            set_prior("normal(...
+```
+
+```{r echo=TRUE, eval=FALSE}
+prior1 <- c(set_prior("normal(10,10)", lb=0, nlpar="Hmin"),
+            set_prior("normal(60,20)", lb=0, nlpar="Hmax"),
+            set_prior("normal(0.01, 0.03", lb=0, nlpar = "k"),
+            set_prior("normal(7,5)", lb=0, nlpar="delta")
+)
+```
+
+```{r}
+fit1 <- brm(formula=f1, data=dat, prior=prior1, chains = 4)
+```
+
+```{r}
+summary(fit1)
+```
+```{r}
+plot(fit1)
+```
+```{r}
+dat$pred1 <- predict(fit1)[,"Estimate"]
+
+dat %>% ggplot(aes(x=day)) +
+  geom_line(aes(group=plantID, y=height_cm), alpha=.1) +
+  geom_line(aes(y=pred1), color="blue")
+```
+CENSORED DATA?
