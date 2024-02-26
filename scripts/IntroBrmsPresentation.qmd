@@ -289,7 +289,7 @@ loo_compare(m1, m2)
 * `elpd_diff` is how much worse a model is relative to the preferred model
 * Want this to be greater (ideally 2X greater) than `se_diff` to favor the more complex model
 
-# Weibull in brms
+## Weibull in brms
 
 ## Data set:
 Use all dates for the Weibull modeling
@@ -388,7 +388,7 @@ fit1.prediction %>% ggplot(aes(x=day)) +
   facet_wrap(~pop)
 ```
 
-## Allow a different Hmax for each pop {.nonincremental)}
+## Allow a different Hmax for each pop {.nonincremental}
 
 * The plants from different pops grow to different heights.  Maybe we should model that.  
 * With only 3 pops we will use a fixed effect. (Need 5+ for random effect)
@@ -494,7 +494,7 @@ fit2.predictions %>% ggplot(aes(x=day)) +
 * Having Hmax alone vary by population did not produce a very good fit.  
 * Exercise: Create and fit a model that allows Hmax and k  parameters to vary by population
 * Plot your results: Any better?
-* Perform a model comparison among all 3 models using the `loo` technique shown about: which fits best?
+* Perform a model comparison among all 3 models using the `loo` technique shown above: which fits best?
 
 ## My formula
 
@@ -528,6 +528,9 @@ prior3 <- c(set_prior("normal(5,3)", lb=0, nlpar="Hmin"),
 
 )
 ```
+I use a gamma on `k` to keep the Intercept k positive. 
+
+I use a zero-centered normal for the `popCC` and `popDPR` `k` priors so that these can vary above or below the intercept value of `k`
 
 ## model summary
 ```{r}
@@ -545,7 +548,7 @@ plot(fit3, N=3, ask=FALSE)
 ```
 
 ## pairs
-
+You can use a `pairs` plot to see how to parameters co-vary during the fit. Generally we don't want to see a strong correlation among parameters.  Here we see that Hmax and K for popCC have an inverse correlation.  This isn't ideal but I think it is because we have so little CC data.  We could impose narrower priors on these parameters but given the lack of data I think I will just leave it.
 ```{r}
 pairs(fit3, variable="CC", regex = TRUE)
 ```
@@ -567,10 +570,25 @@ fit3.predictions %>% ggplot(aes(x=day)) +
 
 ## Model comparison
 
-## Next
+```{r, echo=TRUE}
+fit1 <- add_criterion(fit1, "loo")
+fit2 <- add_criterion(fit2, "loo")
+fit3 <- add_criterion(fit3, "loo")
+loo_compare(fit1, fit2, fit3)
+```
 
-* delta + Hmax
-* delta + k + Hmax (doesn't work well...)
+
+## Next {.nonincremental}
+
+For Monday March 4th
+
+* Fit a model where delta and Hmax can vary by pop.
+* Fit a model where delta, k, and Hmax can vary by pop.  Don't worry if this doesn't work well (but if it doesn't, think about why it doesn't)
+* Do model diagnostics, plots, and predictive plots on the above.
+* Do a model comparison between all 5 models
+
+Other stuff that Julin is thinking about for future meetings
+
 * Uncertainty on the predictions
 * On to random effects and all pops
 * CENSORED DATA?
